@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26228.4
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Exceptional.SourceLink", "StackExchange.Exceptional.SourceLink\StackExchange.Exceptional.SourceLink.csproj", "{8C1447CF-065F-4F64-8323-6330B8035EF3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Exceptional.SourceLink.Tests", "StackExchange.Exceptional.SourceLink.Tests\StackExchange.Exceptional.SourceLink.Tests.csproj", "{ADFF7996-DFE3-48B0-9AEA-5AFEFE90847E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8C1447CF-065F-4F64-8323-6330B8035EF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C1447CF-065F-4F64-8323-6330B8035EF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C1447CF-065F-4F64-8323-6330B8035EF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C1447CF-065F-4F64-8323-6330B8035EF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADFF7996-DFE3-48B0-9AEA-5AFEFE90847E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADFF7996-DFE3-48B0-9AEA-5AFEFE90847E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADFF7996-DFE3-48B0-9AEA-5AFEFE90847E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADFF7996-DFE3-48B0-9AEA-5AFEFE90847E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputType>exe</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputType>exe</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup>    
+    <TargetFramework>net462</TargetFramework>    
+    <ApplicationIcon />    
+    <OutputTypeEx>exe</OutputTypeEx>    
+    <StartupObject />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.3" />
+    <PackageReference Include="StackMail" Version="0.1.0-beta64" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StackExchange.Exceptional.SourceLink\StackExchange.Exceptional.SourceLink.csproj" />
+  </ItemGroup>
+
+</Project>

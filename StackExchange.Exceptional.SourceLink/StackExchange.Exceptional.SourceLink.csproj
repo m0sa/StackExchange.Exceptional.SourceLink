@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net40</TargetFramework>
+    <AssemblyName>StackExchange.Exceptional.SourceLink</AssemblyName>
+    <RootNamespace>StackExchange.Exceptional.SourceLink</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Exceptional" Version="1.0.122" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="build/**/*.*">
+      <Pack>True</Pack>
+      <PackagePath>build</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,10 @@
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Content Include="$(MSBuildThisFileDirectory)/native/*.dll">
+      <Link>%(Filename)%(Extension)</Link>      
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>True</Pack>
+      <PackagePath>build\native</PackagePath>
+    </Content>
+  </ItemGroup>
+</Project>
