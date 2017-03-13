@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Running;
 using StackExchange.Exceptional.Stores;
 using StackMail.Client;
@@ -17,10 +19,18 @@ namespace StackExchange.Exceptional.SourceLink.Tests
             Console.WriteLine(BenchmarkRunner.Run<TraceDumpTest>());
         }
     }
-    
 
+    [Config(typeof(Config))]
     public class TraceDumpTest
     {
+        class Config : ManualConfig
+        {
+            public Config()
+            {
+                Add(new MemoryDiagnoser());
+            }
+        }
+
         private StackMailClient _client;
         private ImmediatelySendEmailRequest _request;
 

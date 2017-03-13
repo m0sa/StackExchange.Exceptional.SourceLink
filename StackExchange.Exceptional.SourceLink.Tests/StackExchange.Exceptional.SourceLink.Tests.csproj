@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.10.3" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.10.3" />
     <PackageReference Include="StackMail" Version="0.1.0-beta64" />
   </ItemGroup>
 
