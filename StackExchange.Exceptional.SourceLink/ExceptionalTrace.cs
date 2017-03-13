@@ -21,12 +21,14 @@ namespace StackExchange.Exceptional.SourceLink
         private static readonly SymRegisterCallbackProc64 RootedTraceDelegate = new SymRegisterCallbackProc64(SymDebugCallback);
         private static readonly IntPtr ProcessHandle = Process.GetCurrentProcess().Handle;
 
-
         /// <summary>
-        /// Hooks into <see cref="ErrorStore.OnBeforeLog" /> and replaces the stack trace in <see cref="Error.Detail" /> with a stack trace with SRCSRV mapped files.
+        /// Initializes the native stack tracing hooks.
         /// </summary>
+        /// <param name="trace">When set to true, prints diagnostic output in the Trace log when a debugger is attached.</param>
         public static void Init(bool trace = false)
         {
+            Shutdown();
+
             SymSetOptions(SymOptions.UNDNAME
                 | SymOptions.DEFERRED_LOADS
                 | SymOptions.LOAD_LINES
@@ -39,17 +41,22 @@ namespace StackExchange.Exceptional.SourceLink
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/gg278179.aspx
                 WINAPI(SymRegisterCallback64(ProcessHandle, RootedTraceDelegate, IntPtr.Zero));
             }
-            ErrorStore.OnBeforeLog += ErrorStoreOnOnBeforeLog;
         }
 
-
+        /// <summary>
+        /// Cleans up resources.
+        /// </summary>
         public static void Shutdown()
         {
-            ErrorStore.OnBeforeLog -= ErrorStoreOnOnBeforeLog;
-            WINAPI(SymCleanup(ProcessHandle));
+            SymCleanup(ProcessHandle);
             SymLoadedModules.Clear();
             SourceMappedPaths.Clear();
         }
+
+        /// <summary>
+        /// Gets the error handler for hooking into <see cref="ErrorStore.OnBeforeLog" />, which replaces the stack trace in <see cref="Error.Detail" /> with a stack trace with SRCSRV mapped files.
+        /// </summary>
+        public static EventHandler<ErrorBeforeLogEventArgs> ErrorStoreBeforeLogHandler { get; } = ErrorStoreOnOnBeforeLog;
 
         private static void ErrorStoreOnOnBeforeLog(object sender, ErrorBeforeLogEventArgs args)
         {
@@ -61,10 +68,6 @@ namespace StackExchange.Exceptional.SourceLink
 
             if (fancyTraceBuilder.Length > 0)
             {
-                fancyTraceBuilder.AppendLine().AppendLine().AppendLine("Full Trace:");
-                var fullTrace = new StackTrace(true);
-                DumpStackTrace(fancyTraceBuilder, fullTrace, skip: 4, framePrefix: "");
-
                 args.Error.Detail = fancyTraceBuilder.ToString() +
 #if DEBUG
                     Environment.NewLine + "----------- ORIGINAL -----------" +

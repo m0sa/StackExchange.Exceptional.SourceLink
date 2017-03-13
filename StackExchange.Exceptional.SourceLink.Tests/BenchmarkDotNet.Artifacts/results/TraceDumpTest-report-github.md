@@ -10,5 +10,5 @@ Frequency=2928835 Hz, Resolution=341.4327 ns, Timer=TSC
 ```
  |           Method |       Mean |    StdDev |
  |----------------- |----------- |---------- |
- | NormalStackTrace | 46.3923 us | 0.2883 us |
- |  FancyStackTrace | 40.8199 us | 0.1590 us |
+ | NormalStackTrace | 45.8769 us | 0.0919 us |
+ |  FancyStackTrace | 40.6470 us | 0.0859 us |
