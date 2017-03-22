@@ -7,8 +7,6 @@ using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Running;
 using StackExchange.Exceptional.Stores;
-using StackMail.Client;
-using StackMail.Operations;
 
 namespace StackExchange.Exceptional.SourceLink.Tests
 {
@@ -31,16 +29,10 @@ namespace StackExchange.Exceptional.SourceLink.Tests
             }
         }
 
-        private StackMailClient _client;
-        private ImmediatelySendEmailRequest _request;
-
         [Setup]
         public void Setup()
         {
             ExceptionalTrace.Init();
-
-            _client = new StackMailClient(); // this is from a known, SRCSRV mapped assembly
-            _request = new ImmediatelySendEmailRequest { AccountId = 42 };
         }
 
         [Benchmark]
@@ -48,7 +40,7 @@ namespace StackExchange.Exceptional.SourceLink.Tests
         {
             try
             {
-                return _client.SendEmailAsync(_request).ConfigureAwait(false).GetAwaiter().GetResult()?.RawResponse;
+                throw new Exception("this is a test exception");
             }
             catch (Exception ex)
             {
@@ -61,7 +53,7 @@ namespace StackExchange.Exceptional.SourceLink.Tests
         {
             try
             {
-                return _client.SendEmailAsync(_request).ConfigureAwait(false).GetAwaiter().GetResult()?.RawResponse;
+                throw new Exception("this is a test exception");
             }
             catch (Exception ex)
             {
