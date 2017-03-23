@@ -4,6 +4,9 @@
     <TargetFramework>net40</TargetFramework>
     <AssemblyName>StackExchange.Exceptional.SourceLink</AssemblyName>
     <RootNamespace>StackExchange.Exceptional.SourceLink</RootNamespace>
+    <SemVer>0.1.0</SemVer>
+    <PackageVersion Condition=" '$(VersionSuffix)' != '' ">$(SemVer)-$(VersionSuffix)</PackageVersion>
+    <PackageVersion Condition=" '$(VersionSuffix)' == '' ">$(SemVer)</PackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
