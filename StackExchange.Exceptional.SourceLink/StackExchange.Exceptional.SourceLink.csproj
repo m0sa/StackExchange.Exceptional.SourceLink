@@ -31,4 +31,15 @@
     </None>
   </ItemGroup>
 
+  <Target Name="IncludePdbs" BeforeTargets="GenerateNuspec;_GetPackageFiles">
+    <ItemGroup>
+      <_Pdbs Include="$(BaseIntermediateOutputPath)$(Configuration)\**\*.pdb" />
+      <None Include="@(_Pdbs)" Pack="True" PackagePath="lib\" />
+      <!--
+        having a traling slash adds the platform to after lib\, e.g. lib\net40
+        alternatively we could use PackagePath="lib\$([MSBuild]::MakeRelative('$(MSBuildThisFileDirectory)$(BaseIntermediateOutputPath)$(Configuration)', '%(RootDir)%(Directory)').Trim('\'))"
+        ... which might give you a hint how I discovered this
+      -->
+    </ItemGroup>
+  </Target>
 </Project>
