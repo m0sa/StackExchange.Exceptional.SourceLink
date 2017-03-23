@@ -13,6 +13,7 @@
     <ApplicationIcon />    
     <OutputTypeEx>exe</OutputTypeEx>    
     <StartupObject />
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <PropertyGroup>

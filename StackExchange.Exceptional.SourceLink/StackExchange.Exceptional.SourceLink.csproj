@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Exceptional" Version="1.0.122" />
+    <PackageReference Include="PdbGit" Version="3.0.41" PrivateAssets="*" />
   </ItemGroup>
 
   <ItemGroup>
