@@ -9,6 +9,16 @@
     <PackageVersion Condition=" '$(VersionSuffix)' == '' ">$(SemVer)</PackageVersion>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>True</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>pdbonly</DebugType>
+    <DebugSymbols>True</DebugSymbols>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="StackExchange.Exceptional" Version="1.0.122" />
     <PackageReference Include="PdbGit" Version="3.0.41" PrivateAssets="*" />
