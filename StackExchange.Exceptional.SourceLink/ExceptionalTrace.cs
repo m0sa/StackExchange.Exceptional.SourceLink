@@ -149,21 +149,21 @@ namespace StackExchange.Exceptional.SourceLink
             return output.ToString();
         }
 
-        public static void FancyTrace(this Exception ex, StringBuilder output) => DumpExceptionStackTrace(output, ex);
+        public static void SourceMappedTrace(this Exception ex, StringBuilder output) => DumpExceptionStackTrace(output, ex);
 
-        public static void FancyTrace(this StackTrace stackTrace, StringBuilder output) => DumpStackTrace(output, stackTrace, "   at ");
+        public static void SourceMappedTrace(this StackTrace stackTrace, StringBuilder output) => DumpStackTrace(output, stackTrace, "   at ");
 
-        public static string FancyTrace(this Exception ex)
+        public static string SourceMappedTrace(this Exception ex)
         {
             var sb = new StringBuilder();
-            ex.FancyTrace(sb);
+            ex.SourceMappedTrace(sb);
             return sb.ToString();
         }
 
-        public static string FancyTrace(this StackTrace trace)
+        public static string SourceMappedTrace(this StackTrace trace)
         {
             var sb = new StringBuilder();
-            trace.FancyTrace(sb);
+            trace.SourceMappedTrace(sb);
             return sb.ToString();
         }
 

@@ -57,7 +57,7 @@ namespace StackExchange.Exceptional.SourceLink.Tests
             }
             catch (Exception ex)
             {
-                return new StackTrace(ex, true).FancyTrace();
+                return new StackTrace(ex, true).SourceMappedTrace();
             }
         }
     }
