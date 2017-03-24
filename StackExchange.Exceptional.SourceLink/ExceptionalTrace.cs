@@ -176,7 +176,7 @@ namespace StackExchange.Exceptional.SourceLink
                 var methodBase = frame.GetMethod();
                 var module = methodBase.Module;
 
-                if (!SymLoadedModules.ContainsKey(module))
+                if (!module.Assembly.IsDynamic && !SymLoadedModules.ContainsKey(module))
                 {
                     lock (SymLoadedModules.SyncRoot)
                     {
@@ -184,7 +184,7 @@ namespace StackExchange.Exceptional.SourceLink
                         {
                             // load symbols
                             var moduleBase = Marshal.GetHINSTANCE(module);
-                            WINAPI(SymLoadModule64(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, moduleBase, 0) > 0);
+                            SymLoadModule64(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, moduleBase, 0);
                             SymLoadedModules.Add(module, null);
                         }
                     }
