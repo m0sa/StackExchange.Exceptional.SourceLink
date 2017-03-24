@@ -25,7 +25,8 @@ namespace StackExchange.Exceptional.SourceLink
         /// Initializes the native stack tracing hooks.
         /// </summary>
         /// <param name="trace">When set to true, prints diagnostic output in the Trace log when a debugger is attached.</param>
-        public static void Init(bool trace = false)
+        /// <param name="symbolsPath">Sets user defined/additional <see href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms680689.aspx">Symbol Paths</see>.</param>
+        public static void Init(string symbolsPath = null, bool trace = false)
         {
             Shutdown();
 
@@ -35,7 +36,7 @@ namespace StackExchange.Exceptional.SourceLink
                 | (trace ? SymOptions.DEBUG : 0)
                 );
 
-            WINAPI(SymInitialize(ProcessHandle, null, false));
+            WINAPI(SymInitialize(ProcessHandle, symbolsPath, false));
             if (trace)
             {
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/gg278179.aspx
