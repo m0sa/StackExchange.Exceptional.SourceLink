@@ -10,3 +10,8 @@ Currently supports
 Planned:
 - portable PDBs
 - embedded (portable) PDBs
+
+Inspired by:
+- [ctaggart/SourceLink](https://github.com/ctaggart/SourceLink)
+- [NickCraver/StackExchange.Exceptional](https://github.com/NickCraver/StackExchange.Exceptional)
+- [opserver/Opserver](https://github.com/opserver/Opserver)
