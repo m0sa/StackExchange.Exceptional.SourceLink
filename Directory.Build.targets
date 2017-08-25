@@ -1,10 +1,10 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)/native/*.dll" Condition="'$(IncludeNative)' == 'true' ">
-      <Link>%(Filename)%(Extension)</Link>
+    <Content Include="$(MSBuildThisFileDirectory)/native/**/*.dll" Condition="'$(IncludeNative)' == 'true' ">
+      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Pack>True</Pack>
-      <PackagePath>build\native</PackagePath>
+      <PackagePath>build\native\%(RecursiveDir)</PackagePath>
     </Content>
 
     <DotNetCliToolReference Include="dotnet-sourcelink" Version="2.2.0" />
