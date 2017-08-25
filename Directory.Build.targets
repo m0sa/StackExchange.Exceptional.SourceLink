@@ -1,10 +1,24 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)/native/*.dll">
-      <Link>%(Filename)%(Extension)</Link>      
+    <Content Include="$(MSBuildThisFileDirectory)/native/*.dll" Condition="'$(IncludeNative)' == 'true' ">
+      <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Pack>True</Pack>
       <PackagePath>build\native</PackagePath>
     </Content>
+
+    <DotNetCliToolReference Include="dotnet-sourcelink" Version="2.2.0" />
   </ItemGroup>
+
+
+  <PropertyGroup Condition=" '$(TestCase)' == 'true' ">
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>true</Optimize>
+    <Pack>false</Pack>
+
+    <!-- those properties force pdbgit to generate SRCSRV mappings  -->
+    <GitCommitId>test1234</GitCommitId>
+    <PdbGitGitRemoteUrl>http://example.org/</PdbGitGitRemoteUrl>
+    <PdbGitSkipVerify>true</PdbGitSkipVerify>
+  </PropertyGroup>
 </Project>

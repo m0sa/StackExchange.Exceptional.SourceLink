@@ -13,5 +13,6 @@ Planned:
 
 Inspired by:
 - [ctaggart/SourceLink](https://github.com/ctaggart/SourceLink)
+- [aarnott/PdbGit](https://github.com/aarnott/PdbGit)
 - [NickCraver/StackExchange.Exceptional](https://github.com/NickCraver/StackExchange.Exceptional)
 - [opserver/Opserver](https://github.com/opserver/Opserver)

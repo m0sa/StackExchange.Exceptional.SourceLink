@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <DebugType>pdbonly</DebugType>
+    <TestCase>true</TestCase>
+    <PdbGitEnabled>true</PdbGitEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="PdbGit" Version="3.0.41" />
+  </ItemGroup>
+</Project>

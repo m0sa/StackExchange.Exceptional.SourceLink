@@ -1,15 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <OutputType>exe</OutputType>
   </PropertyGroup>
 
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputType>exe</OutputType>
   </PropertyGroup>
 
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
+    <ApplicationIcon />
+    <OutputTypeEx>exe</OutputTypeEx>
+    <StartupObject />
     <IsPackable>false</IsPackable>
     <IncludeNative>true</IncludeNative>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -20,12 +26,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>pdbonly</DebugType>
     <DebugSymbols>True</DebugSymbols>
-    <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="xunit" Version="2.3.0-beta4-build3742" />
-    <PackageReference Include="xunit.runner.console" Version="2.3.0-beta4-build3742" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.10.9" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.10.9" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,13 +40,5 @@
     <ProjectReference Include="..\StackExchange.Exceptional.SourceLink.Tests.Portable\StackExchange.Exceptional.SourceLink.Tests.Portable.csproj" />
     <ProjectReference Include="..\StackExchange.Exceptional.SourceLink.Tests.Embedded\StackExchange.Exceptional.SourceLink.Tests.Embedded.csproj" />
   </ItemGroup>
-
-  <Target Name="TestsX64" AfterTargets="Build" Condition="'$(RunTests)' == 'true'">
-    <Exec Command="&quot;$(XunitConsolePath)&quot; &quot;$(TargetPath)&quot; -noshadow" WorkingDirectory="$(TargetDir)" ContinueOnError="true" />
-  </Target>
-
-  <Target Name="TestsX86" AfterTargets="Build" Condition="'$(RunTests)' == 'true'">
-    <Exec Command="&quot;$(XunitConsolePathX86)&quot; &quot;$(TargetPath)&quot; -noshadow" WorkingDirectory="$(TargetDir)" ContinueOnError="true" />
-  </Target>
 
 </Project>

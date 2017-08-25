@@ -6,7 +6,6 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Running;
-using StackExchange.Exceptional.Stores;
 
 namespace StackExchange.Exceptional.SourceLink.Tests
 {
@@ -29,22 +28,34 @@ namespace StackExchange.Exceptional.SourceLink.Tests
             }
         }
 
-        [Setup]
-        public void Setup()
+        [GlobalSetup]
+        public void GlobalSetup()
         {
+            _throw = Activator.CreateInstance(ExceptionThrowingType).ToString;
             ExceptionalTrace.Init();
         }
 
-        [Benchmark]
+        [GlobalCleanup]
+        public void GlobalCleanup()
+        {
+            ExceptionalTrace.Shutdown();
+        }
+
+        [Params(typeof(Full), typeof(PdbOnly), typeof(Portable), typeof(Embedded))]
+        public Type ExceptionThrowingType { get; set; }
+
+        private Func<string> _throw;
+
+        [Benchmark(Baseline = true)]
         public string NormalStackTrace()
         {
             try
             {
-                throw new Exception("this is a test exception");
+                return _throw.Invoke();
             }
             catch (Exception ex)
             {
-                return string.Join(Environment.NewLine, new StackTrace(ex));
+                return ex.ToString();
             }
         }
 
@@ -53,7 +64,7 @@ namespace StackExchange.Exceptional.SourceLink.Tests
         {
             try
             {
-                throw new Exception("this is a test exception");
+                return _throw.Invoke();
             }
             catch (Exception ex)
             {
