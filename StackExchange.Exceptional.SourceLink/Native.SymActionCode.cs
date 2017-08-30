@@ -7,7 +7,7 @@ namespace StackExchange.Exceptional.SourceLink
         /// ActionCodes forwarded to <see cref="DbgHelpInterop.SymRegisterCallbackProc64"/>.
         /// </summary>
         [Flags]
-        public enum SymActionCode : uint
+        public enum SymActionCode : ulong
         {
             /// <summary>
             /// Display verbose information.

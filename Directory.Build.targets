@@ -21,4 +21,10 @@
     <PdbGitGitRemoteUrl>http://example.org/</PdbGitGitRemoteUrl>
     <PdbGitSkipVerify>true</PdbGitSkipVerify>
   </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(SourceLinkTestCase)' == 'true' ">
+    <!-- use pathmap for a consistent build, so we don't have to
+         generate the sourcelink.json programatically -->
+    <SourceLink>$(MSBuildThisFileDirectory)\SourceLink.json</SourceLink>
+  </PropertyGroup>
 </Project>

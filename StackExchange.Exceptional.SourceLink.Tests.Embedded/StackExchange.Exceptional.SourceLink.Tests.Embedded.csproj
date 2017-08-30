@@ -3,12 +3,6 @@
     <TargetFramework>net462</TargetFramework>
     <IsPackable>false</IsPackable>
     <TestCase>true</TestCase>
-    <SourceLinkCreate>true</SourceLinkCreate>
-    <SourceLinkTest>true</SourceLinkTest>
+    <SourceLinkTestCase>true</SourceLinkTestCase>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="SourceLink.Create.GitHub" Version="2.2.0" PrivateAssets="All" />
-    <PackageReference Include="SourceLink.Test" Version="2.2.0" PrivateAssets="all" />
-    <DotNetCliToolReference Include="dotnet-sourcelink-git" Version="2.2.0" />
-  </ItemGroup>
 </Project>

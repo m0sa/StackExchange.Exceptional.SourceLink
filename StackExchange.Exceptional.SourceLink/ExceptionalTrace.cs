@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using static StackExchange.Exceptional.SourceLink.Native;
+using static StackExchange.Exceptional.SourceLink.Native.DbgHelpImports;
 
 namespace StackExchange.Exceptional.SourceLink
 {
@@ -15,11 +16,19 @@ namespace StackExchange.Exceptional.SourceLink
         // needz dbghelp.dll, srcsrv.dll, symsrv.dll in the bin directory
 
         // This must be rooted, the delegate creation is explicit, to show what's actually happening here.
-        // If that happens inside a method (or by an implicit op) the SymRegisterCallbackProc64 instance gets picked up by the GC
+        // If that happens inside a method (or by an implicit op) the SymRegisterCallbackProc instance gets picked up by the GC
         // See here for discussion: http://chat.meta.stackexchange.com/transcript/message/5829178#5829178
         // ReSharper disable once RedundantDelegateCreation
-        private static readonly SymRegisterCallbackProc64 RootedTraceDelegate = new SymRegisterCallbackProc64(SymDebugCallback);
+        private static readonly SymRegisterCallbackProc RootedTraceDelegate = new SymRegisterCallbackProc(SymDebugCallback);
         private static readonly IntPtr ProcessHandle = Process.GetCurrentProcess().Handle;
+        private static bool _trace;
+
+        static ExceptionalTrace()
+        {
+            // init native, before dbghelp imports
+            // make sure nothing from DbgHelp.dll gets called before this is set
+            WINAPI(SetDllDirectory(Environment.Is64BitProcess ? "x64" : "x86"));
+        }
 
         /// <summary>
         /// Initializes the native stack tracing hooks.
@@ -28,7 +37,11 @@ namespace StackExchange.Exceptional.SourceLink
         /// <param name="symbolsPath">Sets user defined/additional <see href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms680689.aspx">Symbol Paths</see>.</param>
         public static void Init(string symbolsPath = null, bool trace = false)
         {
-            Shutdown();
+            _trace = trace;
+            if (trace)
+            {
+                Trace.WriteLine("Initializing, symbolsPath: " + symbolsPath);
+            }
 
             SymSetOptions(SymOptions.UNDNAME
                 | SymOptions.DEFERRED_LOADS
@@ -40,7 +53,7 @@ namespace StackExchange.Exceptional.SourceLink
             if (trace)
             {
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/gg278179.aspx
-                WINAPI(SymRegisterCallback64(ProcessHandle, RootedTraceDelegate, IntPtr.Zero));
+                WINAPI(SymRegisterCallback(ProcessHandle, RootedTraceDelegate, 0));
             }
         }
 
@@ -49,10 +62,12 @@ namespace StackExchange.Exceptional.SourceLink
         /// </summary>
         public static void Shutdown()
         {
-            SymCleanup(ProcessHandle);
+            WINAPI(SymCleanup(ProcessHandle));
             SymLoadedModules.Clear();
             SourceMappedPaths.Clear();
         }
+
+        private static int _initialized;
 
         /// <summary>
         /// Gets the error handler for hooking into <see cref="ErrorStore.OnBeforeLog" />, which replaces the stack trace in <see cref="Error.Detail" /> with a stack trace with SRCSRV mapped files.
@@ -106,12 +121,14 @@ namespace StackExchange.Exceptional.SourceLink
         private static readonly ConcurrentDictionary<Tuple<Module, string>, string> SourceMappedPaths = new ConcurrentDictionary<Tuple<Module, string>, string>();
         private static string SourceMap(Tuple<Module, string> moduleAndSourcePath)
         {
-            var moduleBase = Marshal.GetHINSTANCE(moduleAndSourcePath.Item1);
+            var module = moduleAndSourcePath.Item1;
             var sourcePath = moduleAndSourcePath.Item2;
+            if (!SymLoadedModules.ContainsKey(module)) return sourcePath;
+
             lock (SymGetSorceFile_SyncRoot)
             {
                 var fileName = new StringBuilder(1000);
-                if (SymGetSourceFile(ProcessHandle, moduleBase, "", sourcePath, fileName, fileName.Capacity))
+                if (SymGetSourceFile(ProcessHandle, (IntPtr)SymLoadedModules[module], "", sourcePath, fileName, fileName.Capacity))
                 {
                     sourcePath = fileName.ToString();
                 }
@@ -183,9 +200,12 @@ namespace StackExchange.Exceptional.SourceLink
                         if (!SymLoadedModules.ContainsKey(module))
                         {
                             // load symbols
-                            var moduleBase = Marshal.GetHINSTANCE(module);
-                            SymLoadModule64(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, moduleBase, 0);
-                            SymLoadedModules.Add(module, null);
+                            var result = SymLoadModule(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, Marshal.GetHINSTANCE(module), 0);
+                            if (result == IntPtr.Zero)
+                            {
+                                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
+                            }
+                            SymLoadedModules.Add(module, result);
                         }
                     }
                 }
@@ -212,7 +232,7 @@ namespace StackExchange.Exceptional.SourceLink
 
         private static bool SymDebugCallback(IntPtr hProcess, SymActionCode actionCode, IntPtr callbackData, IntPtr userContext)
         {
-            if (!Debugger.IsAttached)
+            if (!_trace)
             {
                 return false;
             }

@@ -6,15 +6,57 @@ using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
+using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace StackExchange.Exceptional.SourceLink.Tests
 {
-    public class Tests : IDisposable
-    {
-        public Tests(ITestOutputHelper output) =>
-            ExceptionalTrace.Init(System.IO.Path.GetDirectoryName(typeof(Full).Assembly.Location), trace: true);
 
-        public void Dispose() => ExceptionalTrace.Shutdown();
+    public class XUnitTraceListener : TraceListener
+    {
+        private readonly ITestOutputHelper _output;
+
+        public XUnitTraceListener(ITestOutputHelper output) : base("XUnit")
+        {
+            _output = output;
+        }
+
+        public override void Write(string message)
+        {
+            _output.WriteLine(message);
+        }
+
+        public override void WriteLine(string message)
+        {
+            _output.WriteLine(message);
+        }
+    }
+
+    public class ExceptionalTraceFixture : IDisposable
+    {
+        public ExceptionalTraceFixture()
+        {
+            ExceptionalTrace.Init(new Uri(System.IO.Path.GetDirectoryName(GetType().Assembly.CodeBase)).LocalPath, trace: true);
+        }
+
+        public void Dispose()
+        {
+            ExceptionalTrace.Shutdown();
+        }
+    }
+    public class Tests : IDisposable, IClassFixture<ExceptionalTraceFixture>
+    {
+        private TraceListener _output;
+        public Tests(ITestOutputHelper output)
+        {
+            _output = new XUnitTraceListener(output);
+            Trace.Listeners.Add(_output);
+        }
+
+        public void Dispose()
+        {
+            Trace.Listeners.Remove(_output);
+        }
 
         [Theory]
         [InlineData(typeof(Full))]
