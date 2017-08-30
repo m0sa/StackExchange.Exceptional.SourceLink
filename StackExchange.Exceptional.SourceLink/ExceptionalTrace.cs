@@ -206,7 +206,6 @@ namespace StackExchange.Exceptional.SourceLink
                                 Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
                             }
 
-                            Trace.WriteLine($"{module.Name}: HINSTANCE: { hinstance } SymLoadModule64: {result} - { (hinstance == new IntPtr(result) ? "EQUAL": "DIFFERENT" )}");
                             SymLoadedModules.Add(module, result);
                         }
                     }
