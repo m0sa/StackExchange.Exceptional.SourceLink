@@ -28,16 +28,16 @@ namespace StackExchange.Exceptional.SourceLink
         /// (Returning TRUE in this case may have unintended consequences.)
         /// </returns>
         /// <remarks>
-        /// BOOL CALLBACK SymRegisterCallbackProc (
+        /// BOOL CALLBACK PSYMBOL_REGISTERED_CALLBACK (
         ///     _In_     HANDLE  hProcess,
         ///     _In_     ULONG   ActionCode,
         ///     _In_opt_ PVOID   CallbackData,
         ///     _In_opt_ PVOID   UserContext
         /// );
         /// </remarks>
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
         public delegate bool SymRegisterCallbackProc(IntPtr hProcess, SymActionCode ActionCode, IntPtr CallbackData, IntPtr UserContext);
-        
+
         public static class DbgHelpImports
         {
             /// <summary>
@@ -67,13 +67,15 @@ namespace StackExchange.Exceptional.SourceLink
             ///     _In_     BOOL   fInvadeProcess
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet=CharSet.Auto, SetLastError = true)]
+            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static extern bool SymInitialize(IntPtr hProcess, string UserSearchPath, bool fInvadeProcess);
 
             /// <summary>
             /// Deallocates all resources associated with the process handle.
             /// </summary>
             [DllImport(DbgHelp, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
             public static extern bool SymCleanup(IntPtr hProcess);
 
             /// <summary>
@@ -84,13 +86,7 @@ namespace StackExchange.Exceptional.SourceLink
             public static extern uint SymSetOptions(SymOptions SymOptions);
 
             /// <summary>
-            /// <summary>
-            /// <summary>
             /// Retrieves the specified source file from the source server.
-            /// Retrieves the specified source file from the source server.
-            /// Retrieves the specified source file from the source server.
-            /// </summary>
-            /// </summary>
             /// </summary>
             /// <param name="hProcess">A handle to a process. This handle must have been previously passed to the SymInitialize function.</param>
             /// <param name="Base">The base address of the module.</param>
@@ -108,8 +104,9 @@ namespace StackExchange.Exceptional.SourceLink
             ///   _In_     DWORD   Size
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet=CharSet.Ansi, SetLastError = true)]
-            public static extern bool SymGetSourceFile(IntPtr hProcess, IntPtr Base, string Params, string FileSpec, StringBuilder FilePath, int Size);
+            [DllImport(DbgHelp, CharSet = CharSet.Unicode, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool SymGetSourceFileW(IntPtr hProcess, long Base, IntPtr Params, string FileSpec, StringBuilder FilePath, int Size);
 
             /// <summary>
             /// Registers a callback function for use by the symbol handler.
@@ -122,7 +119,8 @@ namespace StackExchange.Exceptional.SourceLink
             /// );
             /// </remarks>
             [DllImport(DbgHelp, SetLastError = true)]
-            public static extern bool SymRegisterCallback(IntPtr hProcess, [MarshalAs(UnmanagedType.FunctionPtr)]SymRegisterCallbackProc CallbackFunction, long UserContext);
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool SymRegisterCallback(IntPtr hProcess, [MarshalAs(UnmanagedType.FunctionPtr)]SymRegisterCallbackProc CallbackFunction, IntPtr UserContext);
 
             /// <summary>
             /// Loads the symbol table for the specified module.
@@ -135,17 +133,17 @@ namespace StackExchange.Exceptional.SourceLink
             /// <br/>If the image is a .pdb file, this parameter cannot be zero.</param>
             /// <param name="SizeOfDll">The size of the module, in bytes. If the value is zero, the library obtains the size from the symbol file. The size contained in the symbol file is not necessarily the actual size. Debuggers and other applications having an actual size should use the real size when calling this function.
             /// <br/>If the image is a .pdb file, this parameter cannot be zero.</param>
-            /// <remarks>DWORD WINAPI SymLoadModule(
+            /// <remarks>DWORD64 WINAPI SymLoadModule64(
             ///     _In_     HANDLE  hProcess,
             ///     _In_opt_ HANDLE  hFile,
             ///     _In_opt_ PCSTR   ImageName,
             ///     _In_opt_ PCSTR   ModuleName,
-            ///     _In_     DWORD   BaseOfDll,
+            ///     _In_     DWORD64 BaseOfDll,
             ///     _In_     DWORD   SizeOfDll
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet=CharSet.Ansi, SetLastError = true)]
-            public static extern IntPtr SymLoadModule(IntPtr hProcess, IntPtr hFile, string ImageName, string ModuleName, IntPtr BaseOfDll, uint SizeOfDll);
+            [DllImport(DbgHelp, CharSet = CharSet.Ansi, SetLastError = true)]
+            public static extern long SymLoadModule64(IntPtr hProcess, IntPtr hFile, string ImageName, string ModuleName, long BaseOfDll, uint SizeOfDll);
         }
     }
 }

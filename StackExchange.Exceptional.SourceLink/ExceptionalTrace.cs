@@ -53,7 +53,7 @@ namespace StackExchange.Exceptional.SourceLink
             if (trace)
             {
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/gg278179.aspx
-                WINAPI(SymRegisterCallback(ProcessHandle, RootedTraceDelegate, 0));
+                WINAPI(SymRegisterCallback(ProcessHandle, RootedTraceDelegate, IntPtr.Zero));
             }
         }
 
@@ -66,8 +66,6 @@ namespace StackExchange.Exceptional.SourceLink
             SymLoadedModules.Clear();
             SourceMappedPaths.Clear();
         }
-
-        private static int _initialized;
 
         /// <summary>
         /// Gets the error handler for hooking into <see cref="ErrorStore.OnBeforeLog" />, which replaces the stack trace in <see cref="Error.Detail" /> with a stack trace with SRCSRV mapped files.
@@ -128,7 +126,7 @@ namespace StackExchange.Exceptional.SourceLink
             lock (SymGetSorceFile_SyncRoot)
             {
                 var fileName = new StringBuilder(1000);
-                if (SymGetSourceFile(ProcessHandle, (IntPtr)SymLoadedModules[module], "", sourcePath, fileName, fileName.Capacity))
+                if (SymGetSourceFileW(ProcessHandle, (long)SymLoadedModules[module], IntPtr.Zero, sourcePath, fileName, fileName.Capacity))
                 {
                     sourcePath = fileName.ToString();
                 }
@@ -200,11 +198,15 @@ namespace StackExchange.Exceptional.SourceLink
                         if (!SymLoadedModules.ContainsKey(module))
                         {
                             // load symbols
-                            var result = SymLoadModule(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, Marshal.GetHINSTANCE(module), 0);
-                            if (result == IntPtr.Zero)
+                            var hinstance = Marshal.GetHINSTANCE(module);
+
+                            var result = SymLoadModule64(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, (long)hinstance, 0);
+                            if (result == 0)
                             {
                                 Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
                             }
+
+                            Trace.WriteLine($"{module.Name}: HINSTANCE: { hinstance } SymLoadModule64: {result} - { (hinstance == new IntPtr(result) ? "EQUAL": "DIFFERENT" )}");
                             SymLoadedModules.Add(module, result);
                         }
                     }
@@ -241,7 +243,6 @@ namespace StackExchange.Exceptional.SourceLink
             {
                 return false; // -> generate into DEBUG_INFO
             }
-
             var trace = new StringBuilder();
             trace.Append(DbgHelp).Append(": ").Append(actionCode);
             if (actionCode == SymActionCode.DEBUG_INFO)
