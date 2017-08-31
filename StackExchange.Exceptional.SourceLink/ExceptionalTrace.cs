@@ -237,13 +237,24 @@ namespace StackExchange.Exceptional.SourceLink
             {
                 return false;
             }
-
+            if (!Environment.Is64BitProcess)
+            {
+                // WTF?! the only way I managed to get it to work correctly..
+                // calling conventions suck
+                hProcess = new IntPtr((long)actionCode & uint.MaxValue);
+                actionCode = (SymActionCode)((long)actionCode >> 32);
+            }
             if (actionCode == SymActionCode.EVENT)
             {
                 return false; // -> generate into DEBUG_INFO
             }
             var trace = new StringBuilder();
-            trace.Append(DbgHelp).Append(": ").Append(actionCode);
+            trace.Append(DbgHelp)
+#if DEBUG
+                .Append(" " + ((long)ProcessHandle).ToString("X"))
+                .Append(" " + ((long)hProcess).ToString("X"))
+#endif
+                .Append(": ").Append(actionCode);
             if (actionCode == SymActionCode.DEBUG_INFO)
             {
                 trace.Append(" ").Append(Marshal.PtrToStringAnsi(callbackData)?.Trim());

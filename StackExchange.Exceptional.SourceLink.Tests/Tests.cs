@@ -46,7 +46,7 @@ namespace StackExchange.Exceptional.SourceLink.Tests
     }
     public class Tests : IDisposable, IClassFixture<ExceptionalTraceFixture>
     {
-        private TraceListener _output;
+        private readonly TraceListener _output;
         public Tests(ITestOutputHelper output)
         {
             _output = new XUnitTraceListener(output);
@@ -56,6 +56,7 @@ namespace StackExchange.Exceptional.SourceLink.Tests
         public void Dispose()
         {
             Trace.Listeners.Remove(_output);
+            _output.Dispose();
         }
 
         [Theory]
