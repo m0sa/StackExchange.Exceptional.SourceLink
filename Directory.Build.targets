@@ -26,5 +26,8 @@
     <!-- use pathmap for a consistent build, so we don't have to
          generate the sourcelink.json programatically -->
     <SourceLink>$(MSBuildThisFileDirectory)\SourceLink.json</SourceLink>
+
+    <!-- this is a hack so that all the sourcelink.json is correct for all test projects / we don't need to regenerate it every time -->
+    <PathMap>$(SolutionDir)=X:\StackExchange.Exceptional.SourceLink\</PathMap>
   </PropertyGroup>
 </Project>

@@ -151,7 +151,7 @@ namespace StackExchange.Exceptional.SourceLink
             /// <summary>
             /// 
             /// </summary>
-            /// <remarks>BOOL IMAGEAPI SymEnumSourceFilesW(
+            /// <remarks>BOOL IMAGEAPI SymEnumSourceFiles(
             ///     _In_ HANDLE hProcess,
             ///     _In_ ULONG64 ModBase,
             ///     _In_opt_ PCWSTR Mask,
@@ -161,6 +161,46 @@ namespace StackExchange.Exceptional.SourceLink
             /// </remarks>
             [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
             public static extern bool SymEnumSourceFiles(IntPtr hProcess, long ModBase, string Mask, [MarshalAs(UnmanagedType.FunctionPtr)] SymEnumSourceFilesCallback cbSrcFiles , IntPtr UserContext);
+
+            public enum SymbolFileType : int
+            {
+                /// <summary>
+                /// exe or dll
+                /// </summary>
+                sfImage = 0,
+                sfDbg = 1,
+                sfPdb = 2,
+                sfMpd = 3,
+            }
+
+            /// <summary>
+            /// Locates a symbol file in the specified symbol path.
+            /// </summary>
+            /// <param name="hProcess">
+            /// A handle to the process that was originally passed to the SymInitialize function. This parameter is optional.
+            /// <para />
+            /// If this parameter is 0, SymPath cannot be NULL. Use this option to load a symbol file without calling SymInitialize or SymCleanup.
+            /// </param>
+            /// <param name="SymPath">The symbol path. If this parameter is NULL or an empty string, the function uses the symbol path set using the SymInitialize or SymSetSearchPath function.</param>
+            /// <param name="ImageFile">The name of the image file.</param>
+            /// <param name="Type">The type of symbol file.</param>
+            /// <param name="SymbolFile">A pointer to a null-terminated string that receives the name of the symbol file.</param>
+            /// <param name="cSymbolFile">The size of the SymbolFile buffer, in characters.</param>
+            /// <param name="DbgFile">A pointer to a buffer that receives the fully qualified path to the symbol file. This buffer must be at least MAX_PATH characters.</param>
+            /// <param name="cDbgFile">The size of the DbgFile buffer, in characters.</param>
+            /// <returns>If the server locates a valid symbol file, it returns TRUE; otherwise, it returns FALSE and GetLastError returns a value that indicates why the symbol file was not returned.</returns>
+            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern bool SymGetSymbolFile(
+                IntPtr hProcess,
+                string SymPath,
+                string ImageFile,
+                SymbolFileType Type,
+                StringBuilder SymbolFile,
+                int cSymbolFile,
+                StringBuilder DbgFile,
+                int cDbgFile
+            );
+
         }
 
         [StructLayout(LayoutKind.Sequential)]

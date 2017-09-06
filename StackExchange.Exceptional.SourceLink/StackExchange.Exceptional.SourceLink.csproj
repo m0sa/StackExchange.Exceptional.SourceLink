@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net40</TargetFramework>
+    <TargetFramework>net45</TargetFramework>
     <AssemblyName>StackExchange.Exceptional.SourceLink</AssemblyName>
     <RootNamespace>StackExchange.Exceptional.SourceLink</RootNamespace>
     <SemVer>0.1.0</SemVer>
@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Exceptional" Version="1.0.122" />
+    <PackageReference Include="System.Reflection.Metadata" Version="1.5.0" />
     <PackageReference Include="PdbGit" Version="3.0.41" PrivateAssets="all" />
   </ItemGroup>
 

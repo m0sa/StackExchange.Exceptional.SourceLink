@@ -62,7 +62,7 @@ namespace StackExchange.Exceptional.SourceLink.Tests
         [Theory]
         [InlineData(typeof(Full))]
         [InlineData(typeof(PdbOnly))]
-        public void IsSourceLinked(Type exceptionThrower)
+        private void IsSourceLinked(Type exceptionThrower)
         {
             var exception = Assert.Throws<Exception>(() => Activator.CreateInstance(exceptionThrower).ToString());
             var stackTrace = exception.SourceMappedTrace();
@@ -71,15 +71,18 @@ namespace StackExchange.Exceptional.SourceLink.Tests
             Assert.Contains("/test1234/", stackTrace);
         }
 
-        [Theory(Skip = "WIP")]
+        [Theory]
         [InlineData(typeof(Portable))]
         [InlineData(typeof(Embedded))]
         public void IsSourceLinkedFuture(Type exceptionThrower)
         {
             var exception = Assert.Throws<Exception>(() => Activator.CreateInstance(exceptionThrower).ToString());
             var stackTrace = exception.SourceMappedTrace();
+            _output.WriteLine("--------------------- Original stack trace: ---------------");
+            _output.WriteLine(exception.ToString());
 
-            // TODO use dummy sourcelink.json for test projects?
+            Assert.Contains("//example.org/", stackTrace);
+            Assert.Contains("/test1234/", stackTrace);
         }
     }
 }
