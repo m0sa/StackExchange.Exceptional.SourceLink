@@ -104,9 +104,9 @@ namespace StackExchange.Exceptional.SourceLink
             ///   _In_     DWORD   Size
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet = CharSet.Unicode, SetLastError = true)]
+            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
-            public static extern bool SymGetSourceFileW(IntPtr hProcess, long Base, IntPtr Params, string FileSpec, StringBuilder FilePath, int Size);
+            public static extern bool SymGetSourceFile(IntPtr hProcess, long Base, IntPtr Params, string FileSpec, StringBuilder FilePath, int Size);
 
             /// <summary>
             /// Registers a callback function for use by the symbol handler.
@@ -142,8 +142,35 @@ namespace StackExchange.Exceptional.SourceLink
             ///     _In_     DWORD   SizeOfDll
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet = CharSet.Ansi, SetLastError = true)]
+            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
             public static extern long SymLoadModule64(IntPtr hProcess, IntPtr hFile, string ImageName, string ModuleName, long BaseOfDll, uint SizeOfDll);
+
+            [DllImport(DbgHelp, SetLastError = true)]
+            public static extern bool SymUnloadModule64(IntPtr hProcess, long BaseOfDll);
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <remarks>BOOL IMAGEAPI SymEnumSourceFilesW(
+            ///     _In_ HANDLE hProcess,
+            ///     _In_ ULONG64 ModBase,
+            ///     _In_opt_ PCWSTR Mask,
+            ///     _In_ PSYM_ENUMSOURCEFILES_CALLBACKW cbSrcFiles,
+            ///     _In_opt_ PVOID UserContext
+            /// );
+            /// </remarks>
+            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern bool SymEnumSourceFiles(IntPtr hProcess, long ModBase, string Mask, [MarshalAs(UnmanagedType.FunctionPtr)] SymEnumSourceFilesCallback cbSrcFiles , IntPtr UserContext);
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SourceFile
+        {
+            public long ModBase;
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public string FileName;
+        }
+
+        public delegate bool SymEnumSourceFilesCallback(ref SourceFile pSourceFile, IntPtr UserContext);
     }
 }

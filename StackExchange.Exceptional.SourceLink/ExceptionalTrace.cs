@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -20,6 +21,8 @@ namespace StackExchange.Exceptional.SourceLink
         // See here for discussion: http://chat.meta.stackexchange.com/transcript/message/5829178#5829178
         // ReSharper disable once RedundantDelegateCreation
         private static readonly SymRegisterCallbackProc RootedTraceDelegate = new SymRegisterCallbackProc(SymDebugCallback);
+        private static readonly SymEnumSourceFilesCallback RootedEnumSourceFilesDelegate = new SymEnumSourceFilesCallback(SymEnumSourceFiles);
+
         private static readonly IntPtr ProcessHandle = Process.GetCurrentProcess().Handle;
         private static bool _trace;
 
@@ -93,7 +96,6 @@ namespace StackExchange.Exceptional.SourceLink
         }
 
         private static readonly Hashtable SymLoadedModules = Hashtable.Synchronized(new Hashtable());
-        private static readonly object SymGetSorceFile_SyncRoot = new object();
         private static void DumpExceptionStackTrace(StringBuilder output, Exception ex)
         {
             // modeled after https://referencesource.microsoft.com/#mscorlib/system/exception.cs,9ce1ff20e283169f,references
@@ -113,26 +115,10 @@ namespace StackExchange.Exceptional.SourceLink
             }
 
             var stackTrace = new StackTrace(ex, true);
-            DumpStackTrace(output, stackTrace, "   at ");
+            DumpStackTrace(output, stackTrace);
         }
 
-        private static readonly ConcurrentDictionary<Tuple<Module, string>, string> SourceMappedPaths = new ConcurrentDictionary<Tuple<Module, string>, string>();
-        private static string SourceMap(Tuple<Module, string> moduleAndSourcePath)
-        {
-            var module = moduleAndSourcePath.Item1;
-            var sourcePath = moduleAndSourcePath.Item2;
-            if (!SymLoadedModules.ContainsKey(module)) return sourcePath;
-
-            lock (SymGetSorceFile_SyncRoot)
-            {
-                var fileName = new StringBuilder(1000);
-                if (SymGetSourceFileW(ProcessHandle, (long)SymLoadedModules[module], IntPtr.Zero, sourcePath, fileName, fileName.Capacity))
-                {
-                    sourcePath = fileName.ToString();
-                }
-                return sourcePath;
-            }
-        }
+        private static readonly ConcurrentDictionary<Tuple<long, string>, string> SourceMappedPaths = new ConcurrentDictionary<Tuple<long, string>, string>();
 
         private static readonly ConcurrentDictionary<MethodBase, string> MethodSignatures = new ConcurrentDictionary<MethodBase, string>();
         private static string GetMethodSignature(MethodBase methodBase)
@@ -166,23 +152,23 @@ namespace StackExchange.Exceptional.SourceLink
 
         public static void SourceMappedTrace(this Exception ex, StringBuilder output) => DumpExceptionStackTrace(output, ex);
 
-        public static void SourceMappedTrace(this StackTrace stackTrace, StringBuilder output) => DumpStackTrace(output, stackTrace, "   at ");
+        public static void SourceMappedTrace(this StackTrace stackTrace, StringBuilder output) => DumpStackTrace(output, stackTrace);
 
         public static string SourceMappedTrace(this Exception ex)
         {
             var sb = new StringBuilder();
-            ex.SourceMappedTrace(sb);
+            DumpExceptionStackTrace(sb, ex);
             return sb.ToString();
         }
 
         public static string SourceMappedTrace(this StackTrace trace)
         {
             var sb = new StringBuilder();
-            trace.SourceMappedTrace(sb);
+            DumpStackTrace(sb, trace);
             return sb.ToString();
         }
 
-        private static void DumpStackTrace(StringBuilder output, StackTrace stackTrace, string framePrefix, int skip = 0)
+        private static void DumpStackTrace(StringBuilder output, StackTrace stackTrace, string framePrefix = "   at ", int skip = 0)
         {
             var frames = stackTrace.GetFrames() ?? new StackFrame[0];
             for (var f = skip; f < frames.Length; f++)
@@ -190,26 +176,6 @@ namespace StackExchange.Exceptional.SourceLink
                 var frame = frames[f];
                 var methodBase = frame.GetMethod();
                 var module = methodBase.Module;
-
-                if (!module.Assembly.IsDynamic && !SymLoadedModules.ContainsKey(module))
-                {
-                    lock (SymLoadedModules.SyncRoot)
-                    {
-                        if (!SymLoadedModules.ContainsKey(module))
-                        {
-                            // load symbols
-                            var hinstance = Marshal.GetHINSTANCE(module);
-
-                            var result = SymLoadModule64(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, (long)hinstance, 0);
-                            if (result == 0)
-                            {
-                                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
-                            }
-
-                            SymLoadedModules.Add(module, result);
-                        }
-                    }
-                }
 
                 output
                     .AppendLine()
@@ -219,7 +185,12 @@ namespace StackExchange.Exceptional.SourceLink
                 var resolvedFileName = frame.GetFileName();
                 if (!string.IsNullOrEmpty(resolvedFileName))
                 {
-                    resolvedFileName = SourceMappedPaths.GetOrAdd(Tuple.Create(module, resolvedFileName), key => SourceMap(key));
+                    ResolveAllPathsInModule(module);
+
+                    resolvedFileName =
+                        SourceMappedPaths.TryGetValue(Tuple.Create((long)SymLoadedModules[module], resolvedFileName), out var mappedFileName)
+                            ? mappedFileName
+                            : resolvedFileName;
                     output
                         .Append(" in ")
                         .Append(resolvedFileName)
@@ -229,6 +200,58 @@ namespace StackExchange.Exceptional.SourceLink
 
                 // TODO GetIsLastFrameFromForeignExceptionStackTrace()
             }
+        }
+
+        private static void ResolveAllPathsInModule(Module module)
+        {
+            if (module.Assembly.IsDynamic || SymLoadedModules.ContainsKey(module))
+            {
+                return;
+            }
+
+            lock (SymLoadedModules.SyncRoot)
+            {
+                if (SymLoadedModules.ContainsKey(module))
+                {
+                    return;
+                }
+
+                // load symbols
+                var hinstance = Marshal.GetHINSTANCE(module);
+                var result = SymLoadModule64(ProcessHandle, IntPtr.Zero, module.FullyQualifiedName, module.Name, (long) hinstance, 0);
+                if (result == 0)
+                {
+                    Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
+                }
+
+                SymLoadedModules.Add(module, result);
+
+                try
+                {
+                    // save get all source file mappings in this module
+                    WINAPI(DbgHelpImports.SymEnumSourceFiles(ProcessHandle, result, null, RootedEnumSourceFilesDelegate, IntPtr.Zero));
+                }
+                finally
+                {
+                    // unload the project, don't hang on to it
+                    WINAPI(SymUnloadModule64(ProcessHandle, result));
+                }
+            }
+        }
+
+
+        private static bool SymEnumSourceFiles(ref SourceFile sourceFile, IntPtr context)
+        {
+            var sb = new StringBuilder(1024);
+            var sourcePath = sourceFile.FileName;
+            if (SymGetSourceFile(ProcessHandle, sourceFile.ModBase, IntPtr.Zero, sourceFile.FileName, sb, sb.Capacity))
+            {
+                sourcePath = sb.ToString();
+            }
+
+            SourceMappedPaths[Tuple.Create(sourceFile.ModBase, sourceFile.FileName)] = sourcePath;
+
+            return true;
         }
 
         private static bool SymDebugCallback(IntPtr hProcess, SymActionCode actionCode, IntPtr callbackData, IntPtr userContext)
@@ -265,5 +288,4 @@ namespace StackExchange.Exceptional.SourceLink
             return false;
         }
     }
-
 }
