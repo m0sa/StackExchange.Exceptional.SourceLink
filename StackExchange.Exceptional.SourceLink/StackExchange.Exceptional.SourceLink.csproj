@@ -23,8 +23,7 @@
   <ItemGroup>
     <PackageReference Include="StackExchange.Exceptional" Version="1.0.122" />
     <PackageReference Include="System.Reflection.Metadata" Version="1.5.0" />
-    <PackageReference Include="System.ValueTuple" Version="4.*" />
-    <PackageReference Include="PdbGit" Version="3.0.41" PrivateAssets="all" />
+    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
   </ItemGroup>
 
   <ItemGroup>
