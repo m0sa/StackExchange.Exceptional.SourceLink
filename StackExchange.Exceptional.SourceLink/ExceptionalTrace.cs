@@ -323,6 +323,18 @@ namespace StackExchange.Exceptional.SourceLink
             }
         }
 
+        struct MappingAttempt
+        {
+            public MappingAttempt(bool success, string mappedValue)
+            {
+                Success = success;
+                MappedValue = mappedValue;
+            }
+
+            public bool Success { get; }
+            public string MappedValue { get; }
+        }
+
         [DataContract]
         public class SourceLink
         {
@@ -341,13 +353,13 @@ namespace StackExchange.Exceptional.SourceLink
             [DataMember(Name = "documents")]
             public IDictionary<string, string> Documents { get; private set; }
 
-            private List<Func<string, (bool success, string url)>> _mappers;
+            private List<Func<string, MappingAttempt>> _mappers;
 
             private void Initialize()
             {
                 if (Documents == null || Documents.Count == 0) return;
 
-                var mappers = new List<Func<string, (bool success, string url)>>();
+                var mappers = new List<Func<string, MappingAttempt>>();
                 // https://github.com/ctaggart/SourceLink/blob/ef5fb54b063fc5d65d1b953b83d0154278e21e59/dotnet-sourcelink/Program.cs#L407
                 foreach (var kvp in Documents)
                 {
@@ -358,14 +370,14 @@ namespace StackExchange.Exceptional.SourceLink
                         var pattern = Regex.Escape(from).Replace(@"\*", "(?<path>.+)");
                         var matcher = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
                         mappers.Add(file => matcher.Match(file) is Match m && m.Success
-                            ? (true, to.Replace("*", m.Groups["path"].Value.Replace(@"\", "/")))
-                            : (false, null));
+                            ? new MappingAttempt(true, to.Replace("*", m.Groups["path"].Value.Replace(@"\", "/")))
+                            : new MappingAttempt(false, null));
                     }
                     else
                     {
                         mappers.Add(file => from.Equals(file, StringComparison.OrdinalIgnoreCase)
-                            ? (true, to)
-                            : (false, null));
+                            ? new MappingAttempt(true, to)
+                            : new MappingAttempt(false, null));
                     }
                 }
                 _mappers = mappers;
@@ -374,8 +386,8 @@ namespace StackExchange.Exceptional.SourceLink
             public string GetUrl(string file) =>
                 _mappers
                     .Select(tryMap => tryMap(file))
-                    .FirstOrDefault(m => m.success) is var result
-                        ? result.url
+                    .FirstOrDefault(m => m.Success) is var result
+                        ? result.MappedValue
                         : file;
         }
 
