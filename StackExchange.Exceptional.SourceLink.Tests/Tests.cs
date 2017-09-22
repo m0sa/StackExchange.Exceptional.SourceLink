@@ -62,19 +62,9 @@ namespace StackExchange.Exceptional.SourceLink.Tests
         [Theory]
         [InlineData(typeof(Full))]
         [InlineData(typeof(PdbOnly))]
-        private void IsSourceLinked(Type exceptionThrower)
-        {
-            var exception = Assert.Throws<Exception>(() => Activator.CreateInstance(exceptionThrower).ToString());
-            var stackTrace = exception.SourceMappedTrace();
-
-            Assert.Contains("//example.org/", stackTrace);
-            Assert.Contains("/test1234/", stackTrace);
-        }
-
-        [Theory]
         [InlineData(typeof(Portable))]
         [InlineData(typeof(Embedded))]
-        public void IsSourceLinkedFuture(Type exceptionThrower)
+        public void IsSourceLinked(Type exceptionThrower)
         {
             var exception = Assert.Throws<Exception>(() => Activator.CreateInstance(exceptionThrower).ToString());
             var stackTrace = exception.SourceMappedTrace();
