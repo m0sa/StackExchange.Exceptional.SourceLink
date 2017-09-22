@@ -94,19 +94,34 @@ namespace StackExchange.Exceptional.SourceLink
         private static void ErrorStoreOnOnBeforeLog(object sender, ErrorBeforeLogEventArgs args)
         {
             var exception = args.Error.Exception;
-            if (exception == null) return;
+            if (exception == null || exception is ExceptionalTraceException) return;
 
             var fancyTraceBuilder = new StringBuilder();
-            DumpExceptionStackTrace(fancyTraceBuilder, exception);
+            try
+            {
+                DumpExceptionStackTrace(fancyTraceBuilder, exception);
+            }
+            catch (Exception ex)
+            {
+                if (sender is ErrorStore store)
+                {
+                    store.Log(new Error(new ExceptionalTraceException("ExceptionalTrace failed", ex)
+                    {
+                        Data = { { "GeneratedBeforeException", fancyTraceBuilder.ToString() } },
+                    }));
+                }
+                fancyTraceBuilder.Clear();
+            }
 
             if (fancyTraceBuilder.Length > 0)
             {
-                args.Error.Detail = fancyTraceBuilder.ToString() +
+                args.Error.Detail = fancyTraceBuilder.ToString()
 #if DEBUG
+                +
                     Environment.NewLine + "----------- ORIGINAL -----------" +
-                    Environment.NewLine + args.Error.Detail +
+                    Environment.NewLine + args.Error.Detail
 #endif
-                    "";
+                    ;
                 args.Error.ErrorHash = args.Error.GetHash();
             }
         }
@@ -571,5 +586,12 @@ namespace StackExchange.Exceptional.SourceLink
             }
         }
 
+    }
+
+    public class ExceptionalTraceException : Exception
+    {
+        public ExceptionalTraceException(string message, Exception inner) : base(message, inner)
+        {
+        }
     }
 }
