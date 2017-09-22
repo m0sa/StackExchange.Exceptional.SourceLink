@@ -419,7 +419,7 @@ namespace StackExchange.Exceptional.SourceLink
             }
             else
             {
-                TraceSourceLink("probing for portable PDB symbols failed: " + Marshal.GetExceptionForHR(Marshal.GetExceptionCode(), Marshal.GetExceptionPointers()));
+                TraceSourceLink("probing for portable PDB symbols failed: " + Marshal.GetExceptionForHR(Marshal.GetHRForLastWin32Error(), Marshal.GetExceptionPointers()));
             }
 
             return null;
