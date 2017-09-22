@@ -12,6 +12,7 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -73,8 +74,15 @@ namespace StackExchange.Exceptional.SourceLink
         /// </summary>
         public static void Shutdown()
         {
-            WINAPI(SymCleanup(ProcessHandle));
-            SymLoadedModules.Clear();
+            lock(SymLoadedModules.SyncRoot)
+            {
+                WINAPI(SymCleanup(ProcessHandle));
+                foreach(var disposable in SymLoadedModules.OfType<IDisposable>())
+                {
+                    disposable.Dispose();
+                }
+                SymLoadedModules.Clear();
+            }
             SourceMappedPaths.Clear();
         }
 
@@ -282,8 +290,9 @@ namespace StackExchange.Exceptional.SourceLink
                 if (TryMapPortablePdb(module, out var metadataReaderProvider))
                 {
                     // store the metadata reader provider for later,
-                    // .net full doesn't spit out correct stack traces yet
-                    // we'll reuse it later to generate them by ourself
+                    // .net full bellow 4.7 doesn't spit out correct frame
+                    // line info from portable and embedded pdbs yet
+                    // we'll reuse it later to figure them out by ourself
                     SymLoadedModules[module] = metadataReaderProvider;
 
                     // we've successfully read a portable PDB
@@ -314,6 +323,7 @@ namespace StackExchange.Exceptional.SourceLink
             }
         }
 
+        [DataContract]
         public class SourceLink
         {
             private static readonly DataContractJsonSerializer _serializer = new DataContractJsonSerializer(typeof(SourceLink), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
@@ -322,38 +332,51 @@ namespace StackExchange.Exceptional.SourceLink
                 if (blob == null || blob.Length == 0) return new SourceLink();
                 using (var ms = new MemoryStream(blob))
                 {
-                    return (SourceLink)_serializer.ReadObject(ms);
+                    var sourceLink = (SourceLink)_serializer.ReadObject(ms);
+                    sourceLink?.Initialize();
+                    return sourceLink;
                 }
             }
 
-            public IDictionary<string, string> documents { get; set; }
+            [DataMember(Name = "documents")]
+            public IDictionary<string, string> Documents { get; private set; }
 
-            public string GetUrl(string file)
+            private List<Func<string, (bool success, string url)>> _mappers;
+
+            private void Initialize()
             {
-                if (documents == null || documents.Count == 0) return file;
+                if (Documents == null || Documents.Count == 0) return;
 
+                var mappers = new List<Func<string, (bool success, string url)>>();
                 // https://github.com/ctaggart/SourceLink/blob/ef5fb54b063fc5d65d1b953b83d0154278e21e59/dotnet-sourcelink/Program.cs#L407
-                foreach (var key in documents.Keys)
+                foreach (var kvp in Documents)
                 {
-                    if (key.Contains("*"))
+                    var from = kvp.Key;
+                    var to = kvp.Value;
+                    if (from.Contains("*") && to.Contains("*"))
                     {
-                        var pattern = Regex.Escape(key).Replace(@"\*", "(?<path>.+)");
-                        var regex = new Regex(pattern);
-                        var m = regex.Match(file);
-                        if (!m.Success) continue;
-                        var url = documents[key];
-                        var path = m.Groups["path"].Value.Replace(@"\", "/");
-                        return url.Replace("*", path);
+                        var pattern = Regex.Escape(from).Replace(@"\*", "(?<path>.+)");
+                        var matcher = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                        mappers.Add(file => matcher.Match(file) is Match m && m.Success
+                            ? (true, to.Replace("*", m.Groups["path"].Value.Replace(@"\", "/")))
+                            : (false, null));
                     }
                     else
                     {
-                        if (!key.Equals(file, StringComparison.Ordinal)) continue;
-                        return documents[key];
+                        mappers.Add(file => from.Equals(file, StringComparison.OrdinalIgnoreCase)
+                            ? (true, to)
+                            : (false, null));
                     }
                 }
-
-                return file;
+                _mappers = mappers;
             }
+
+            public string GetUrl(string file) =>
+                _mappers
+                    .Select(tryMap => tryMap(file))
+                    .FirstOrDefault(m => m.success) is var result
+                        ? result.url
+                        : file;
         }
 
         private static MetadataReaderProvider GetMetadataReaderProvider(Module module)
