@@ -409,13 +409,17 @@ namespace StackExchange.Exceptional.SourceLink
 
             var sbFile = new StringBuilder(1024);
             var sbPath = new StringBuilder(1024);
-            if (WINAPI(SymGetSymbolFile(ProcessHandle, null, module.FullyQualifiedName, SymbolFileType.sfPdb, sbFile, sbFile.Capacity, sbPath, sbPath.Capacity)))
+            if (SymGetSymbolFile(ProcessHandle, null, module.FullyQualifiedName, SymbolFileType.sfPdb, sbFile, sbFile.Capacity, sbPath, sbPath.Capacity))
             {
                 // todo determine if pdb is not portable early
                 // https://github.com/tmat/corefx/blob/f808e59c3ef93e141b019d661a4443a0e19c7442/src/System.Diagnostics.StackTrace/src/System/Diagnostics/StackTraceSymbols.CoreCLR.cs#L164
                 var pdbFileContent = File.ReadAllBytes(sbFile.ToString()).ToImmutableArray();
                 TraceSourceLink("probing for portable PDB symbols: " + sbFile);
                 return MetadataReaderProvider.FromPortablePdbImage(pdbFileContent);
+            }
+            else
+            {
+                TraceSourceLink("probing for portable PDB symbols failed: " + Marshal.GetExceptionForHR(Marshal.GetExceptionCode(), Marshal.GetExceptionPointers()));
             }
 
             return null;
