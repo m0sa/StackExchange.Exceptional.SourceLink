@@ -251,14 +251,20 @@ namespace StackExchange.Exceptional.SourceLink
             TraceSourceLink("found portable PDB for: " + module.FullyQualifiedName);
 
             // https://github.com/dotnet/symreader-portable/blob/d27c08d6015c4716ced790e34233c0219773ab10/src/Microsoft.DiaSymReader.PortablePdb/Utilities/MetadataUtilities.cs
-            var sourceLinkHandle = rd
+            var sourceLinkHandles = rd
                 .GetCustomDebugInformation(EntityHandle.ModuleDefinition)
+                .Where(r => !r.IsNil)
                 .Select(rd.GetCustomDebugInformation)
-                .FirstOrDefault(cdi => rd.GetGuid(cdi.Kind) == SourceLinkId);
-            var sourceLink = SourceLink.Deserialize(
-                sourceLinkHandle.Value.IsNil
-                    ? null
-                    : rd.GetBlobBytes(sourceLinkHandle.Value));
+                .Where(cdi => !cdi.Value.IsNil && rd.GetGuid(cdi.Kind) == SourceLinkId)
+                .ToList();
+            if (sourceLinkHandles.Count == 0)
+            {
+                metadataReaderProvider?.Dispose();
+                metadataReaderProvider = null;
+                return false;
+            }
+            var sourceLinkHandle = sourceLinkHandles.First();
+            var sourceLink = SourceLink.Deserialize(rd.GetBlobBytes(sourceLinkHandle.Value));
 
             var hinstance = (long)Marshal.GetHINSTANCE(module);
             foreach (var dh in rd.Documents)
