@@ -36,12 +36,16 @@
     <ProjectReference Include="..\StackExchange.Exceptional.SourceLink.Tests.Embedded\StackExchange.Exceptional.SourceLink.Tests.Embedded.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <XUnitFailRegex>\[FAIL\]</XUnitFailRegex>
+    <!-- <XUnitFailRegex>(Errors|Failed):\W((?!0,)\d+)</XUnitFailRegex> -->
+  </PropertyGroup>
   <Target Name="TestsX64" AfterTargets="Build" Condition="'$(RunTests)' == 'true'">
-    <Exec Command="&quot;$(XunitConsolePath)&quot; &quot;$(TargetPath)&quot; -noshadow" WorkingDirectory="$(TargetDir)" ContinueOnError="true" />
+    <Exec Command="&quot;$(XunitConsolePath)&quot; &quot;$(TargetPath)&quot; -noshadow" WorkingDirectory="$(TargetDir)" CustomWarningRegularExpression="$(XUnitFailRegex)" />
   </Target>
 
   <Target Name="TestsX86" AfterTargets="Build" Condition="'$(RunTests)' == 'true'">
-    <Exec Command="&quot;$(XunitConsolePathX86)&quot; &quot;$(TargetPath)&quot; -noshadow" WorkingDirectory="$(TargetDir)" ContinueOnError="true" />
+    <Exec Command="&quot;$(XunitConsolePathX86)&quot; &quot;$(TargetPath)&quot; -noshadow" WorkingDirectory="$(TargetDir)" CustomWarningRegularExpression="$(XUnitFailRegex)" />
   </Target>
 
 </Project>
