@@ -29,8 +29,8 @@ namespace StackExchange.Exceptional.SourceLink
         // If that happens inside a method (or by an implicit op) the SymRegisterCallbackProc instance gets picked up by the GC
         // See here for discussion: http://chat.meta.stackexchange.com/transcript/message/5829178#5829178
         // ReSharper disable once RedundantDelegateCreation
-        private static readonly SymRegisterCallbackProc RootedTraceDelegate = new SymRegisterCallbackProc(SymDebugCallback);
-        private static readonly SymEnumSourceFilesCallback RootedEnumSourceFilesDelegate = new SymEnumSourceFilesCallback(SymEnumSourceFiles);
+        private static readonly SymRegisterCallbackProcW64 RootedTraceDelegate = new SymRegisterCallbackProcW64(SymDebugCallback);
+        private static readonly SymEnumSourceFilesCallbackW RootedEnumSourceFilesDelegate = new SymEnumSourceFilesCallbackW(SymEnumSourceFiles);
 
         private static readonly IntPtr ProcessHandle = Process.GetCurrentProcess().Handle;
         private static bool _trace;
@@ -52,7 +52,7 @@ namespace StackExchange.Exceptional.SourceLink
             _trace = trace;
             if (trace)
             {
-                Trace.WriteLine("Initializing, symbolsPath: " + symbolsPath);
+                TraceSourceLink("Initializing, symbolsPath: " + symbolsPath);
             }
 
             SymSetOptions(SymOptions.UNDNAME
@@ -65,7 +65,7 @@ namespace StackExchange.Exceptional.SourceLink
             if (trace)
             {
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/gg278179.aspx
-                WINAPI(SymRegisterCallback(ProcessHandle, RootedTraceDelegate, IntPtr.Zero));
+                WINAPI(SymRegisterCallbackW64(ProcessHandle, RootedTraceDelegate, 0));
             }
         }
 
@@ -312,8 +312,14 @@ namespace StackExchange.Exceptional.SourceLink
 
                 try
                 {
+                    TraceSourceLink("{0} - enumerating source files", module.Name);
                     // save get all source file mappings in this module
-                    WINAPI(DbgHelpImports.SymEnumSourceFiles(ProcessHandle, result, null, RootedEnumSourceFilesDelegate, IntPtr.Zero));
+                    WINAPI(SymEnumSourceFilesW(ProcessHandle, result, null, RootedEnumSourceFilesDelegate, IntPtr.Zero));
+                }
+                catch (Exception ex)
+                {
+                    TraceSourceLink("{0} - SymEnumSourceFiles failed - {1}", module.Name, ex);
+                    throw;
                 }
                 finally
                 {
@@ -432,13 +438,25 @@ namespace StackExchange.Exceptional.SourceLink
             Trace.WriteLine(" SourceLink: " + message);
         }
 
-        private static bool SymEnumSourceFiles(ref SourceFile sourceFile, IntPtr context)
+        [Conditional("TRACE")]
+        private static void TraceSourceLink(string messageFormat, params object[] args)
+        {
+            if (!_trace) return;
+            Trace.WriteLine(" SourceLink: " + string.Format(messageFormat, args));
+        }
+
+        private static bool SymEnumSourceFiles(ref SourceFileW sourceFile, IntPtr context)
         {
             var sb = new StringBuilder(1024);
             var sourcePath = sourceFile.FileName;
-            if (SymGetSourceFile(ProcessHandle, sourceFile.ModBase, IntPtr.Zero, sourceFile.FileName, sb, sb.Capacity))
+            if (SymGetSourceFileW(ProcessHandle, sourceFile.ModBase, IntPtr.Zero, sourceFile.FileName, sb, sb.Capacity))
             {
                 sourcePath = sb.ToString();
+                TraceSourceLink(" HIT SymGetSourceFile {0} => {1}", sourceFile.ModBase, sourceFile);
+            }
+            else
+            {
+                TraceSourceLink("MISS SymGetSourceFile {0} => {1}", sourceFile.FileName, sourcePath);
             }
 
             SourceMappedPaths[Tuple.Create(sourceFile.ModBase, sourceFile.FileName)] = sourcePath;
@@ -446,7 +464,7 @@ namespace StackExchange.Exceptional.SourceLink
             return true;
         }
 
-        private static bool SymDebugCallback(IntPtr hProcess, SymActionCode actionCode, IntPtr callbackData, IntPtr userContext)
+        private static bool SymDebugCallback(IntPtr hProcess, SymActionCode actionCode, long callbackData, long userContext)
         {
             if (!_trace)
             {
@@ -459,10 +477,6 @@ namespace StackExchange.Exceptional.SourceLink
                 hProcess = new IntPtr((long)actionCode & uint.MaxValue);
                 actionCode = (SymActionCode)((long)actionCode >> 32);
             }
-            if (actionCode == SymActionCode.EVENT)
-            {
-                return false; // -> generate into DEBUG_INFO
-            }
             var trace = new StringBuilder();
             trace.Append(DbgHelp)
 #if DEBUG
@@ -470,13 +484,19 @@ namespace StackExchange.Exceptional.SourceLink
                 .Append(" " + ((long)hProcess).ToString("X"))
 #endif
                 .Append(": ").Append(actionCode);
-            if (actionCode == SymActionCode.DEBUG_INFO)
+            if (actionCode == SymActionCode.EVENT)
             {
-                trace.Append(" ").Append(Marshal.PtrToStringAnsi(callbackData)?.Trim());
+                var evt = (CBA_EVENT)Marshal.PtrToStructure(new IntPtr(callbackData), typeof(CBA_EVENT));
+                trace.Append("[").Append(evt.severity).Append("] ").Append(evt.desc?.Trim());
+                Trace.WriteLine(trace.ToString());
+                return true;
+            }
+            else if (actionCode == SymActionCode.DEBUG_INFO)
+            {
+                trace.Append(" ").Append(Marshal.PtrToStringUni(new IntPtr(callbackData))?.Trim());
             }
 
             Trace.WriteLine(trace.ToString());
-
             return false;
         }
 

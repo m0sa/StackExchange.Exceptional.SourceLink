@@ -14,7 +14,7 @@ namespace StackExchange.Exceptional.SourceLink
         public const string DbgHelp = "dbghelp.dll";
 
         /// <summary>
-        /// An application-defined callback function used with the <see cref="SymRegisterCallback"/> function. It is called by the symbol handler.
+        /// An application-defined callback function used with the <see cref="SymRegisterCallbackW64"/> function. It is called by the symbol handler.
         /// </summary>
         /// <param name="hProcess">A handle to the process that was originally passed to the SymInitialize function.</param>
         /// <param name="ActionCode"><see cref="SymActionCode"/></param>
@@ -36,7 +36,7 @@ namespace StackExchange.Exceptional.SourceLink
         /// );
         /// </remarks>
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-        public delegate bool SymRegisterCallbackProc(IntPtr hProcess, SymActionCode ActionCode, IntPtr CallbackData, IntPtr UserContext);
+        public delegate bool SymRegisterCallbackProcW64(IntPtr hProcess, SymActionCode ActionCode, long CallbackData, long UserContext);
 
         public static class DbgHelpImports
         {
@@ -104,9 +104,9 @@ namespace StackExchange.Exceptional.SourceLink
             ///   _In_     DWORD   Size
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
+            [DllImport(DbgHelp, CharSet = CharSet.Unicode, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
-            public static extern bool SymGetSourceFile(IntPtr hProcess, long Base, IntPtr Params, string FileSpec, StringBuilder FilePath, int Size);
+            public static extern bool SymGetSourceFileW(IntPtr hProcess, long Base, IntPtr Params, string FileSpec, StringBuilder FilePath, int Size);
 
             /// <summary>
             /// Registers a callback function for use by the symbol handler.
@@ -118,9 +118,9 @@ namespace StackExchange.Exceptional.SourceLink
             ///     _In_ PVOID                         UserContext
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, SetLastError = true)]
+            [DllImport(DbgHelp, SetLastError = true, CharSet = CharSet.Unicode)]
             [return: MarshalAs(UnmanagedType.Bool)]
-            public static extern bool SymRegisterCallback(IntPtr hProcess, [MarshalAs(UnmanagedType.FunctionPtr)]SymRegisterCallbackProc CallbackFunction, IntPtr UserContext);
+            public static extern bool SymRegisterCallbackW64(IntPtr hProcess, [MarshalAs(UnmanagedType.FunctionPtr)]SymRegisterCallbackProcW64 CallbackFunction, ulong UserContext);
 
             /// <summary>
             /// Loads the symbol table for the specified module.
@@ -142,8 +142,8 @@ namespace StackExchange.Exceptional.SourceLink
             ///     _In_     DWORD   SizeOfDll
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
-            public static extern long SymLoadModule64(IntPtr hProcess, IntPtr hFile, string ImageName, string ModuleName, long BaseOfDll, uint SizeOfDll);
+            [DllImport(DbgHelp, SetLastError = true)]
+            public static extern long SymLoadModule64(IntPtr hProcess, IntPtr hFile, [MarshalAs(UnmanagedType.LPStr)]string ImageName, [MarshalAs(UnmanagedType.LPStr)]string ModuleName, long BaseOfDll, uint SizeOfDll);
 
             [DllImport(DbgHelp, SetLastError = true)]
             public static extern bool SymUnloadModule64(IntPtr hProcess, long BaseOfDll);
@@ -151,7 +151,7 @@ namespace StackExchange.Exceptional.SourceLink
             /// <summary>
             /// 
             /// </summary>
-            /// <remarks>BOOL IMAGEAPI SymEnumSourceFiles(
+            /// <remarks>BOOL IMAGEAPI SymEnumSourceFilesW(
             ///     _In_ HANDLE hProcess,
             ///     _In_ ULONG64 ModBase,
             ///     _In_opt_ PCWSTR Mask,
@@ -159,8 +159,8 @@ namespace StackExchange.Exceptional.SourceLink
             ///     _In_opt_ PVOID UserContext
             /// );
             /// </remarks>
-            [DllImport(DbgHelp, CharSet = CharSet.Auto, SetLastError = true)]
-            public static extern bool SymEnumSourceFiles(IntPtr hProcess, long ModBase, string Mask, [MarshalAs(UnmanagedType.FunctionPtr)] SymEnumSourceFilesCallback cbSrcFiles , IntPtr UserContext);
+            [DllImport(DbgHelp, CharSet = CharSet.Unicode, SetLastError = true)]
+            public static extern bool SymEnumSourceFilesW(IntPtr hProcess, long ModBase, string Mask, [MarshalAs(UnmanagedType.FunctionPtr)] SymEnumSourceFilesCallbackW cbSrcFiles , IntPtr UserContext);
 
             public enum SymbolFileType : int
             {
@@ -203,14 +203,32 @@ namespace StackExchange.Exceptional.SourceLink
 
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct SourceFile
+        public enum CBA_EVENT_SEVERITY
+        {
+            Info = 0,
+            Problem = 1,
+            Attn = 2,
+            Fatal = 3,
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct CBA_EVENT
+        {
+            public CBA_EVENT_SEVERITY severity;
+            public int code;
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public string desc;
+            public IntPtr @object;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct SourceFileW
         {
             public long ModBase;
-            [MarshalAs(UnmanagedType.LPTStr)]
+            [MarshalAs(UnmanagedType.LPWStr)]
             public string FileName;
         }
 
-        public delegate bool SymEnumSourceFilesCallback(ref SourceFile pSourceFile, IntPtr UserContext);
+        public delegate bool SymEnumSourceFilesCallbackW(ref SourceFileW pSourceFile, IntPtr UserContext);
     }
 }
