@@ -473,11 +473,13 @@ namespace StackExchange.Exceptional.SourceLink
             if (SymGetSourceFileW(ProcessHandle, sourceFile.ModBase, IntPtr.Zero, sourceFile.FileName, sb, sb.Capacity))
             {
                 sourcePath = sb.ToString();
+#if DEBUG
                 TraceSourceLink(" HIT SymGetSourceFile {0} => {1}", sourceFile.ModBase, sourceFile);
             }
             else
             {
                 TraceSourceLink("MISS SymGetSourceFile {0} => {1}", sourceFile.FileName, sourcePath);
+#endif
             }
 
             SourceMappedPaths[Tuple.Create(sourceFile.ModBase, sourceFile.FileName)] = sourcePath;
