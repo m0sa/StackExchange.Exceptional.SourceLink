@@ -94,19 +94,34 @@ namespace StackExchange.Exceptional.SourceLink
         private static void ErrorStoreOnOnBeforeLog(object sender, ErrorBeforeLogEventArgs args)
         {
             var exception = args.Error.Exception;
-            if (exception == null) return;
+            if (exception == null || exception is ExceptionalTraceException) return;
 
             var fancyTraceBuilder = new StringBuilder();
-            DumpExceptionStackTrace(fancyTraceBuilder, exception);
+            try
+            {
+                DumpExceptionStackTrace(fancyTraceBuilder, exception);
+            }
+            catch (Exception ex)
+            {
+                if (sender is ErrorStore store)
+                {
+                    store.Log(new Error(new ExceptionalTraceException("ExceptionalTrace failed", ex)
+                    {
+                        Data = { { "GeneratedBeforeException", fancyTraceBuilder.ToString() } },
+                    }));
+                }
+                fancyTraceBuilder.Clear();
+            }
 
             if (fancyTraceBuilder.Length > 0)
             {
-                args.Error.Detail = fancyTraceBuilder.ToString() +
+                args.Error.Detail = fancyTraceBuilder.ToString()
 #if DEBUG
+                +
                     Environment.NewLine + "----------- ORIGINAL -----------" +
-                    Environment.NewLine + args.Error.Detail +
+                    Environment.NewLine + args.Error.Detail
 #endif
-                    "";
+                    ;
                 args.Error.ErrorHash = args.Error.GetHash();
             }
         }
@@ -425,13 +440,13 @@ namespace StackExchange.Exceptional.SourceLink
             {
                 // todo determine if pdb is not portable early
                 // https://github.com/tmat/corefx/blob/f808e59c3ef93e141b019d661a4443a0e19c7442/src/System.Diagnostics.StackTrace/src/System/Diagnostics/StackTraceSymbols.CoreCLR.cs#L164
-                var pdbFileContent = File.ReadAllBytes(sbFile.ToString()).ToImmutableArray();
                 TraceSourceLink("probing for portable PDB symbols: " + sbFile);
+                var pdbFileContent = File.ReadAllBytes(sbFile.ToString()).ToImmutableArray();
                 return MetadataReaderProvider.FromPortablePdbImage(pdbFileContent);
             }
             else
             {
-                TraceSourceLink("probing for portable PDB symbols failed: " + Marshal.GetExceptionForHR(Marshal.GetHRForLastWin32Error(), Marshal.GetExceptionPointers()));
+                TraceSourceLink("probing for portable PDB symbols failed: " + Marshal.GetExceptionForHR(Marshal.GetHRForLastWin32Error()));
             }
 
             return null;
@@ -597,5 +612,12 @@ namespace StackExchange.Exceptional.SourceLink
             }
         }
 
+    }
+
+    public class ExceptionalTraceException : Exception
+    {
+        public ExceptionalTraceException(string message, Exception inner) : base(message, inner)
+        {
+        }
     }
 }
