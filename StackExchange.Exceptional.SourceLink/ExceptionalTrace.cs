@@ -34,12 +34,21 @@ namespace StackExchange.Exceptional.SourceLink
 
         private static readonly IntPtr ProcessHandle = Process.GetCurrentProcess().Handle;
         private static bool _trace;
+        private static readonly LibHandle _dbgHelpHandle;
 
         static ExceptionalTrace()
         {
-            // init native, before dbghelp imports
-            // make sure nothing from DbgHelp.dll gets called before this is set
-            WINAPI(SetDllDirectory(Environment.Is64BitProcess ? "x64" : "x86"));
+            // * make sure nothing from DbgHelp.dll gets called before this is set
+            // * we need to load the dbghelp.dll and it's dependencies via the alternate search order (also affects all dependecies)
+            //   https://msdn.microsoft.com/en-us/library/windows/desktop/ms682586.aspx#Alternate_Search_Order_for_Desktop_Applications
+            //   otherwise dbghelp gets picked up from system32, srcsrv and symsrv don't get loaded and you get 0x7e errors
+            // * kernel32!SetDllDirectory("x64") works on desktop apps, but fails horribly in IIS                ^^
+            var codeBase = Assembly.GetExecutingAssembly().CodeBase;
+            var location = new Uri(codeBase).LocalPath;
+            var directory = Path.GetDirectoryName(location);
+            var dbgHelpPath = Path.Combine(directory, Environment.Is64BitProcess ? "x64" : "x86", DbgHelp);
+
+            _dbgHelpHandle = new LibHandle(dbgHelpPath, LoadLibraryFlags.LOAD_WITH_ALTERED_SEARCH_PATH);
         }
 
         /// <summary>
@@ -344,7 +353,6 @@ namespace StackExchange.Exceptional.SourceLink
                 }
                 finally
                 {
-                    // unload the project, don't hang on to it
                     WINAPI(SymUnloadModule64(ProcessHandle, result));
                 }
             }
@@ -473,17 +481,9 @@ namespace StackExchange.Exceptional.SourceLink
             if (SymGetSourceFileW(ProcessHandle, sourceFile.ModBase, IntPtr.Zero, sourceFile.FileName, sb, sb.Capacity))
             {
                 sourcePath = sb.ToString();
-#if DEBUG
-                TraceSourceLink(" HIT SymGetSourceFile {0} => {1}", sourceFile.ModBase, sourceFile);
-            }
-            else
-            {
-                TraceSourceLink("MISS SymGetSourceFile {0} => {1}", sourceFile.FileName, sourcePath);
-#endif
             }
 
             SourceMappedPaths[Tuple.Create(sourceFile.ModBase, sourceFile.FileName)] = sourcePath;
-
             return true;
         }
 
@@ -507,7 +507,12 @@ namespace StackExchange.Exceptional.SourceLink
                 .Append(" " + ((long)hProcess).ToString("X"))
 #endif
                 .Append(": ").Append(actionCode);
-            if (actionCode == SymActionCode.EVENT)
+            if (actionCode.HasFlag(SymActionCode.SRCSRV_INFO))
+            {
+                trace.Append(" ").Append(Marshal.PtrToStringAuto(new IntPtr(callbackData))?.Trim());
+                return true;
+            }
+            else if (actionCode.HasFlag(SymActionCode.EVENT) || actionCode.HasFlag(SymActionCode.SRCSRV_EVENT))
             {
                 var evt = (CBA_EVENT)Marshal.PtrToStructure(new IntPtr(callbackData), typeof(CBA_EVENT));
                 trace.Append("[").Append(evt.severity).Append("] ").Append(evt.desc?.Trim());
